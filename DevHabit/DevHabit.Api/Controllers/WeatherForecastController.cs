@@ -1,6 +1,3 @@
-#nullable enable
-using System.Collections.Generic;
-using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,24 +11,24 @@ public class WeatherForecastController : ControllerBase
     {
         "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
     };
-    private readonly ILogger<WeatherForecastController> logger;
+
+    private readonly ILogger<WeatherForecastController> _logger;
 
     public WeatherForecastController(ILogger<WeatherForecastController> logger)
     {
-        this.logger = logger;
+        _logger = logger;
     }
 
     [HttpGet(Name = "GetWeatherForecast")]
-
     public IEnumerable<WeatherForecast> Get()
     {
-        logger.LogInformation("Fetching data ");
+        _logger.LogInformation("Fetching weather forecast");
         return Enumerable.Range(1, 5).Select(index => new WeatherForecast
-        {
-            Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            TemperatureC = RandomNumberGenerator.GetInt32(-20, 55),
-            Summary = Summaries[RandomNumberGenerator.GetInt32(Summaries.Length)]
-        })
-        .ToArray();
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+                TemperatureC = RandomNumberGenerator.GetInt32(-20, 55),
+                Summary = Summaries[RandomNumberGenerator.GetInt32(Summaries.Length)]
+            })
+            .ToArray();
     }
 }

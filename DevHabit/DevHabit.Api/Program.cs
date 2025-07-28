@@ -3,19 +3,21 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
 builder.Services.AddOpenApi();
 
 builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resources => resources.AddService(builder.Environment.ApplicationName))
-    .WithTracing(tracing => tracing.AddHttpClientInstrumentation()
-    .AddAspNetCoreInstrumentation())
-    .WithMetrics(metrices => metrices.AddHttpClientInstrumentation()
-    .AddAspNetCoreInstrumentation()
-    .AddRuntimeInstrumentation())
+    .ConfigureResource(resource => resource.AddService(builder.Environment.ApplicationName))
+    .WithTracing(tracing => tracing
+        .AddHttpClientInstrumentation()
+        .AddAspNetCoreInstrumentation())
+    .WithMetrics(metrics => metrics
+        .AddHttpClientInstrumentation()
+        .AddAspNetCoreInstrumentation()
+        .AddRuntimeInstrumentation())
     .UseOtlpExporter();
 
 builder.Logging.AddOpenTelemetry(options =>
@@ -24,7 +26,7 @@ builder.Logging.AddOpenTelemetry(options =>
     options.IncludeFormattedMessage = true;
 });
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {

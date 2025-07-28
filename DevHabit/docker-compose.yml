@@ -8,17 +8,27 @@ services:
       - 5000:8080
       - 5001:8081
     environment:
-      # Seq
-      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://devhabit.seq:5341/ingest/otlp
-      # - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
-      # Aspire Dashboard
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://devhabit.aspire-dashboard:18889
+      - ConnectionStrings__Database=Server=sqlserver;Database=DevHabitDb;User Id=sa;Password=Sar123456!;TrustServerCertificate=True;
+      - ASPNETCORE_ENVIRONMENT=Development
+      # OTEL/Seq/Aspire Dashboard
+      # OTEL_EXPORTER_OTLP_ENDPOINT=http://devhabit.seq:5341/ingest/otlp
+      # OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://devhabit.aspire-dashboard:18888
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+    depends_on:
+      - sqlserver
+    networks:
+      - app-network
+    command: >
+      bash -c "
+        dotnet ef database update &&
+        dotnet DevHabit.Api.dll
+      "
 
   devhabit.seq:
-    image: datalust/seq:2024.3 # or latest
+    image: datalust/seq:2024.3
     environment:
-      ACCEPT_EULA: "Y"
+      - ACCEPT_EULA=Y
     volumes:
       - ./.containers/seq_data:/data
     ports:
@@ -28,6 +38,25 @@ services:
   devhabit.aspire-dashboard:
     image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
     environment:
-      DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: true
+      - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
     ports:
       - 18888:18888
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    environment:
+      - SA_PASSWORD=Sar123456!
+      - ACCEPT_EULA=Y
+    ports:
+      - "14330:1433"
+    networks:
+      - app-network
+    volumes:
+      - sql_data:/var/opt/mssql
+
+networks:
+  app-network:
+
+volumes:
+  sql_data:

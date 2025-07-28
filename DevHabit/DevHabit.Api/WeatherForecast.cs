@@ -1,3 +1,5 @@
+#nullable enable
+using System;
 namespace DevHabit.Api;
 
 public class WeatherForecast

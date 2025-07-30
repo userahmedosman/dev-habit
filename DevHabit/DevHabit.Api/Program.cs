@@ -1,3 +1,4 @@
+using DevHabit.Api.AutoMapper;
 using DevHabit.Api.Database;
 using DevHabit.Api.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -9,14 +10,18 @@ using OpenTelemetry.Trace;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(option =>
+{
+    option.ReturnHttpNotAcceptable = true;  
+}).AddNewtonsoftJson()
+.AddXmlSerializerFormatters();
 
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Database")));
 
-
+builder.Services.AddAutoMapper(cfg => cfg.AddProfile<AutoMapperProfiles>());
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(resource => resource.AddService(builder.Environment.ApplicationName))
     .WithTracing(tracing => tracing

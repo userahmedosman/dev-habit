@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using DevHabit.Api.DTO.Habits;
+using DevHabit.Api.DTO.Tags;
 using DevHabit.Api.Entities;
 
 namespace DevHabit.Api.AutoMapper;
@@ -15,6 +16,12 @@ public class AutoMapperProfiles: Profile
         CreateMap<MileStoneUpdateDto, MileStone>().ReverseMap();
         CreateMap<CreateHabitDto, Habit>().ReverseMap();
         CreateMap<UpdateHabitDto, Habit>().ReverseMap();
+
+        // Tags
+
+        CreateMap<TagDto, Tag>().ReverseMap();
+        CreateMap<CreateTagDto, Tag>().ReverseMap();
+        CreateMap<UpdateTagDto, Tag>().ReverseMap();
 
 
     }

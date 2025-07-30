@@ -6,6 +6,7 @@ namespace DevHabit.Api.Database;
 public sealed class ApplicationDbContext: DbContext
 {
     public DbSet<Habit> Habits { get; set; }
+    public DbSet<Tag> Tags { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema(Schemas.Application);

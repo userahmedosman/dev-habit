@@ -17,9 +17,11 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     [HttpGet]
     public async Task<IActionResult> GetHabits()
     {
-        List<Habit> habits = await context.Habits.ToListAsync();
+        List<Habit> habits = await context.Habits
+                .Include(t => t.Tags)
+                .ToListAsync();
 
-        var result = mapper.Map<List<HabitDto>>(habits);
+        var result = mapper.Map<List<HabitWithTagDto>>(habits);
 
         return Ok(result);
     }
@@ -27,12 +29,19 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     [HttpGet("{id}")]
     public async Task<IActionResult> GetHabit(string id)
     {
-        Habit? habit = await context.Habits.FindAsync(id);
+        if(string.IsNullOrEmpty(id))
+        { 
+            return BadRequest("Empty Habit ID");
+        }
+        Habit? habit = await context.Habits
+                .Include(h => h.Tags)
+                .FirstOrDefaultAsync(h => h.Id == id);
+
         if (habit is null)
         {
             return NotFound();
         }
-        var result = mapper.Map<HabitDto>(habit);
+        var result = mapper.Map<HabitWithTagDto>(habit);
         return Ok(result);
     }
 

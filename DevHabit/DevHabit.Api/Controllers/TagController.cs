@@ -16,10 +16,6 @@ public class TagController(ApplicationDbContext context, IMapper mapper) : Contr
     {
         var tags = await context.Tags.ToListAsync();
 
-        if (tags == null || !tags.Any())
-        {
-            return NotFound("No tags found.");
-        }
 
         var tagsDtos = mapper.Map<List<TagDto>>(tags);
         return Ok(tagsDtos);

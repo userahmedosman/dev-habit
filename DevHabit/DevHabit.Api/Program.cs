@@ -1,6 +1,8 @@
 using DevHabit.Api.AutoMapper;
 using DevHabit.Api.Database;
 using DevHabit.Api.Extensions;
+using DevHabit.Api.Middleware;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 using OpenTelemetry;
@@ -15,6 +17,19 @@ builder.Services.AddControllers(option =>
     option.ReturnHttpNotAcceptable = true;  
 }).AddNewtonsoftJson()
 .AddXmlSerializerFormatters();
+
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions.TryAdd("requestId", context.HttpContext.TraceIdentifier);
+    };
+});
+
+builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddOpenApi();
 
@@ -31,7 +46,7 @@ builder.Services.AddOpenTelemetry()
         .AddHttpClientInstrumentation()
         .AddAspNetCoreInstrumentation()
         .AddRuntimeInstrumentation())
-    .UseOtlpExporter();
+        .UseOtlpExporter();
 
 builder.Logging.AddOpenTelemetry(options =>
 {
@@ -50,5 +65,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapControllers();
+
+app.UseExceptionHandler();
 
 await app.RunAsync();

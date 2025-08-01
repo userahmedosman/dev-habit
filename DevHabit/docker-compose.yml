@@ -10,9 +10,9 @@ services:
     environment:
       - ConnectionStrings__Database=Server=sqlserver;Database=DevHabitDb;User Id=sa;Password=Sar123456!;TrustServerCertificate=True;
       - ASPNETCORE_ENVIRONMENT=Development
-      # OTEL/Seq/Aspire Dashboard
-      # OTEL_EXPORTER_OTLP_ENDPOINT=http://devhabit.seq:5341/ingest/otlp
-      # OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL/Seq/Aspire Dashboard
+      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://devhabit.seq:5341/ingest/otlp
+      # - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://devhabit.aspire-dashboard:18888
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
     depends_on:

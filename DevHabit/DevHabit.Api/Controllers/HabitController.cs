@@ -2,6 +2,7 @@
 using DevHabit.Api.Database;
 using DevHabit.Api.DTO.Habits;
 using DevHabit.Api.Entities;
+using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
@@ -46,14 +47,12 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateHabit([FromBody] CreateHabitDto createHabitDto)
+    public async Task<IActionResult> CreateHabit(CreateHabitDto createHabitDto, IValidator<CreateHabitDto> validator)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
+         await validator.ValidateAndThrowAsync(createHabitDto);
+
         Habit habit = mapper.Map<Habit>(createHabitDto);
-        habit.Id = $"h_{Guid.CreateVersion7()}"; // Using CreateVersion7 for a unique ID
+        habit.Id = $"h_{Guid.CreateVersion7()}"; 
         habit.CreatedAtUtc = DateTime.UtcNow;
         habit.Status = Entities.HabitStatus.Ongoing;
         context.Habits.Add(habit);

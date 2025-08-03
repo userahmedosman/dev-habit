@@ -16,9 +16,16 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     private readonly IMapper mapper = mapper;
 
     [HttpGet]
-    public async Task<IActionResult> GetHabits()
+    public async Task<IActionResult> GetHabits([FromQuery] HabitQueryParameters query)
     {
+        query.Search ??= query.Search?.Trim().ToLower();
+
+       
         List<Habit> habits = await context.Habits
+            .Where(h => string.IsNullOrEmpty(query.Search) || h.Name.ToLower().Contains(query.Search) || h.Description != null && h.Description.ToLower()
+            .Contains(query.Search))
+            .Where(t => query.Type == null || t.Type == query.Type)
+            .Where(s => query.Status == null || s.Status == query.Status)
                 .Include(t => t.Tags)
                 .ToListAsync();
 

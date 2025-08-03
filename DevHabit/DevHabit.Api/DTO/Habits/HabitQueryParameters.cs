@@ -11,5 +11,5 @@ public sealed record HabitQueryParameters
 
     public Entities.HabitStatus? Status { get; init; }
 
-
+    public string? Sort { get; init; }
 }

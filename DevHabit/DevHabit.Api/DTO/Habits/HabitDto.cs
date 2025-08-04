@@ -1,5 +1,4 @@
 ﻿namespace DevHabit.Api.DTO.Habits;
-
 public sealed record HabitDto
 {
     public required string Id { get; init; }

@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
 using DevHabit.Api.Database;
+using DevHabit.Api.DTO.Common;
 using DevHabit.Api.DTO.Habits;
 using DevHabit.Api.Entities;
 using DevHabit.Api.Services.Sorting;
@@ -27,19 +28,16 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
         }
         query.Search ??= query.Search?.Trim().ToLower();
         SortMapping[] sortMappings = sortMappingProvider.GetMappings<HabitDto, Habit>();
-        
-        List<Habit> habits = await context.Habits
+
+        IQueryable<HabitWithTagDto> habitQuery = context.Habits
             .Where(h => string.IsNullOrEmpty(query.Search) || h.Name.ToLower().Contains(query.Search) || h.Description != null && h.Description.ToLower()
             .Contains(query.Search))
             .Where(t => query.Type == null || t.Type == query.Type)
             .ApplySort(query.Sort, sortMappings)
-            .Where(s => query.Status == null || s.Status == query.Status)
-                .Include(t => t.Tags)
-                .ToListAsync();
-
-        var result = mapper.Map<List<HabitWithTagDto>>(habits);
-
-        return Ok(result);
+            .Select(HabitQueries.ProjectToDtoWithTags());
+    
+        var paginationResult = await PaginationResult<HabitWithTagDto>.CreateAsync(habitQuery, query.Page, query.PageSize);
+        return Ok(paginationResult);
     }
 
     [HttpGet("{id}")]

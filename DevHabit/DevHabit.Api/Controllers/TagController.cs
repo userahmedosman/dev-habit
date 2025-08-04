@@ -19,7 +19,13 @@ public class TagController(ApplicationDbContext context, IMapper mapper) : Contr
 
 
         var tagsDtos = mapper.Map<List<TagDto>>(tags);
-        return Ok(tagsDtos);
+
+        var tagCollection = new TagCollectionDto
+        {
+            Items = tagsDtos
+        };
+
+        return Ok(tagCollection);
     }
 
 

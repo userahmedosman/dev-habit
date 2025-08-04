@@ -1,5 +1,4 @@
 ﻿namespace DevHabit.Api.DTO.Tags;
-
 public sealed record TagDto
 {
     public required string Id { get; init; }

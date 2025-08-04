@@ -19,7 +19,7 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     private readonly IMapper mapper = mapper;
 
     [HttpGet]
-    public async Task<IActionResult> GetHabits([FromQuery] HabitQueryParameters query, SortMappingProvider sortMappingProvider)
+    public async Task<ActionResult<PaginationResult<HabitDto>>> GetHabits([FromQuery] HabitQueryParameters query, SortMappingProvider sortMappingProvider)
     {
         if(!sortMappingProvider.ValidateMapping<HabitDto, Habit>(query.Sort))
         {

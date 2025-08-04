@@ -12,4 +12,9 @@ public sealed record HabitQueryParameters
     public Entities.HabitStatus? Status { get; init; }
 
     public string? Sort { get; init; }
+
+    public int Page { get; init; } = 1;
+    public int PageSize { get; init; } = 2;
+
+
 }

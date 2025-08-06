@@ -1,3 +1,4 @@
+using DevHabit.Api;
 using DevHabit.Api.AutoMapper;
 using DevHabit.Api.Database;
 using DevHabit.Api.DTO.Habits;
@@ -17,52 +18,13 @@ using OpenTelemetry.Trace;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers(option =>
-{
-    option.ReturnHttpNotAcceptable = true;  
-}).AddNewtonsoftJson(options => options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver())
-.AddXmlSerializerFormatters();
+builder.AddControllers()
+       .AddErrorHandlers()
+       .AddDatabase()
+       .AddOpenTelemetry()
+       .AddApplicationServices();
 
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-builder.Services.AddProblemDetails(options =>
-{
-    options.CustomizeProblemDetails = context =>
-    {
-        context.ProblemDetails.Extensions.TryAdd("requestId", context.HttpContext.TraceIdentifier);
-    };
-});
-
-builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-
-builder.Services.AddOpenApi();
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("Database")));
-
-builder.Services.AddAutoMapper(cfg => cfg.AddProfile<AutoMapperProfiles>());
-builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource.AddService(builder.Environment.ApplicationName))
-    .WithTracing(tracing => tracing
-        .AddHttpClientInstrumentation()
-        .AddAspNetCoreInstrumentation())
-    .WithMetrics(metrics => metrics
-        .AddHttpClientInstrumentation()
-        .AddAspNetCoreInstrumentation()
-        .AddRuntimeInstrumentation())
-        .UseOtlpExporter();
-
-builder.Logging.AddOpenTelemetry(options =>
-{
-    options.IncludeScopes = true;
-    options.IncludeFormattedMessage = true;
-});
-
-builder.Services.AddTransient<SortMappingProvider>();
-builder.Services.AddSingleton<ISortMappingDefinition, SortMappingDefinition<HabitDto, Habit>>(_ => HabitMappings.SortMapping);
-
-builder.Services.AddTransient<DataShapingService>();
 
 WebApplication app = builder.Build();
 

@@ -8,7 +8,7 @@ services:
       - 5000:8080
       - 5001:8081
     environment:
-      - ConnectionStrings__Database=Server=sqlserver;Database=DevHabitDb;User Id=sa;Password=Sar123456!;TrustServerCertificate=True;
+      - ConnectionStrings__Database=${DB_CONNECTION}
       - ASPNETCORE_ENVIRONMENT=Development
       - OTEL/Seq/Aspire Dashboard
       # - OTEL_EXPORTER_OTLP_ENDPOINT=http://devhabit.seq:5341/ingest/otlp

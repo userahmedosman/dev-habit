@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reflection;
+using DevHabit.Api.DTO.Common;
 
 namespace DevHabit.Api.Services;
 
@@ -33,7 +34,7 @@ public sealed class DataShapingService
 
         return (ExpandoObject)shapedObject;
     }
-    public List<ExpandoObject> ShapeCollectionData<T> (IEnumerable<T> enitities, string? fields)
+    public List<ExpandoObject> ShapeCollectionData<T> (IEnumerable<T> enitities, string? fields, Func<T, List<LinkDto>>? linksFactory = null)
     {
         HashSet<string> fieldSet = fields?
             .Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -55,6 +56,10 @@ public sealed class DataShapingService
             foreach(PropertyInfo propertyInfo in propertyInfos)
             {
                 shapedObject[propertyInfo.Name] = propertyInfo.GetValue(enitity);
+            }
+            if(linksFactory is not null)
+            {
+                shapedObject["links"] = linksFactory(enitity);
             }
             shapedObjects.Add((ExpandoObject)shapedObject);
         }

@@ -11,6 +11,7 @@ namespace DevHabit.Api.Controllers;
 [ApiController]
 public class HabitTagController(ApplicationDbContext context) : ControllerBase
 {
+    public static readonly string Name = nameof(HabitTagController).Replace("Controller", string.Empty);
     [HttpPut]
     public async Task<ActionResult> UpsertHabitTags(string habitId, UpsertHabitTagDto upsertHabitTagDto)
     {

@@ -8,17 +8,26 @@ public static class DatabaseExtensions
     public static async Task ApplyMigrationsAsync(this WebApplication app)
     {
         using IServiceScope scope = app.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetService<ApplicationDbContext>();
+        var ApplicationDbContext = scope.ServiceProvider.GetService<ApplicationDbContext>();
+        var ApplicationIdentityDbContext = scope.ServiceProvider.GetService<ApplicationIdentityDbContext>();
 
-        if (dbContext == null)
+        if (ApplicationDbContext is null)
         {
             throw new InvalidOperationException("ApplicationDbContext is not registered in the service provider.");
         }
 
+        if(ApplicationIdentityDbContext is null)
+        {
+            throw new InvalidOperationException("ApplicationIdentityDbContext is not registered in the service provider.");
+        }
+
         try
         {
-            await dbContext.Database.MigrateAsync();
-            app.Logger.LogInformation("Database Migration Applied Successfully");
+            await ApplicationDbContext.Database.MigrateAsync();
+            app.Logger.LogInformation("ApplicationDatabase Migration Applied Successfully");
+
+            await ApplicationIdentityDbContext.Database.MigrateAsync();
+            app.Logger.LogInformation("IdentityDatabase Migration Applied Successfully");
         }
         catch (Exception e)
         {

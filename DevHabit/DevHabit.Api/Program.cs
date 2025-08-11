@@ -21,8 +21,9 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.AddApiServices()
        .AddErrorHandlers()
        .AddDatabase()
-       .AddOpenTelemetry()
-       .AddApplicationServices();
+       .AddObservability()
+       .AddApplicationServices()
+       .AddAthenticationServices();
 
 WebApplication app = builder.Build();
 

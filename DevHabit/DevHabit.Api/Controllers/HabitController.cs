@@ -1,5 +1,6 @@
 ﻿using System.Dynamic;
 using System.Linq.Expressions;
+using System.Net.Mime;
 using Asp.Versioning;
 using AutoMapper;
 using DevHabit.Api.Database;
@@ -20,7 +21,13 @@ namespace DevHabit.Api.Controllers;
 [Route("habits")]
 [ApiController]
 [ApiVersion("1.0")]
-
+[Produces(
+    MediaTypeNames.Application.Json,
+    CustomMediaTypeNames.Application.JsonV1,
+    CustomMediaTypeNames.Application.JsonV2,
+    CustomMediaTypeNames.Application.HateoasJson,
+    CustomMediaTypeNames.Application.HateoasJsonV1,
+    CustomMediaTypeNames.Application.HateoasJsonV2)]
 public sealed class HabitController(ApplicationDbContext context, IMapper mapper, LinkService linkService) : ControllerBase
 {
     private readonly IMapper mapper = mapper;
@@ -76,6 +83,7 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
 
     [HttpGet("{id}")]
     [MapToApiVersion(1.0)]
+    
     public async Task<IActionResult> GetHabit(string id, string? fields, DataShapingService dataShaping, [FromHeader(Name="Accept")]string? accept)
     {
         if (string.IsNullOrEmpty(id))

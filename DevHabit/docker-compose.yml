@@ -44,7 +44,7 @@ services:
 
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sqlserver
+    container_name: devhabit_dbhost
     environment:
       - SA_PASSWORD=Sar123456!
       - ACCEPT_EULA=Y

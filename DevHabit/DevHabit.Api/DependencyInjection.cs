@@ -1,4 +1,5 @@
-﻿using DevHabit.Api.AutoMapper;
+﻿using Asp.Versioning;
+using DevHabit.Api.AutoMapper;
 using DevHabit.Api.Database;
 using DevHabit.Api.DTO.Habits;
 using DevHabit.Api.Entities;
@@ -19,7 +20,7 @@ namespace DevHabit.Api;
 
 public static class DependencyInjection
 {
-    public static WebApplicationBuilder AddControllers(this WebApplicationBuilder builder)
+    public static WebApplicationBuilder AddApiServices(this WebApplicationBuilder builder)
     {
         builder.Services.AddControllers(option =>
         {
@@ -30,9 +31,27 @@ public static class DependencyInjection
         builder.Services.Configure<MvcOptions>(options =>
         {
             NewtonsoftJsonOutputFormatter formatter = options.OutputFormatters.OfType<NewtonsoftJsonOutputFormatter>().First();
+            formatter.SupportedMediaTypes.Add(CustomMediaTypeNames.Application.JsonV1);
+            formatter.SupportedMediaTypes.Add(CustomMediaTypeNames.Application.JsonV2);
             formatter.SupportedMediaTypes.Add(CustomMediaTypeNames.Application.HateoasJson);
+            formatter.SupportedMediaTypes.Add(CustomMediaTypeNames.Application.HateoasJsonV1);
+            formatter.SupportedMediaTypes.Add(CustomMediaTypeNames.Application.HateoasJsonV2);
         });
 
+        builder.Services
+            .AddApiVersioning(options =>
+            {
+                options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1.0);
+                options.AssumeDefaultVersionWhenUnspecified = true;
+                options.ReportApiVersions =  true;
+                options.ApiVersionSelector = new DefaultApiVersionSelector(options);
+                options.ApiVersionReader = ApiVersionReader.Combine(
+                    new MediaTypeApiVersionReader(),
+                    new MediaTypeApiVersionReaderBuilder()
+                    .Template("application/vnd.dev-habit.hateoas.{version}+json")
+                    .Build());
+            })
+            .AddMvc();
 
         builder.Services.AddOpenApi();
 
@@ -86,7 +105,6 @@ public static class DependencyInjection
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
         builder.Services.AddAutoMapper(cfg => cfg.AddProfile<AutoMapperProfiles>());
-
 
         builder.Services.AddTransient<SortMappingProvider>();
         builder.Services.AddSingleton<ISortMappingDefinition, SortMappingDefinition<HabitDto, Habit>>(_ => HabitMappings.SortMapping);

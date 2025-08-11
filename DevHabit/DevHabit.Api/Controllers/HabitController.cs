@@ -1,5 +1,6 @@
 ﻿using System.Dynamic;
 using System.Linq.Expressions;
+using Asp.Versioning;
 using AutoMapper;
 using DevHabit.Api.Database;
 using DevHabit.Api.DTO.Common;
@@ -18,6 +19,8 @@ using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 namespace DevHabit.Api.Controllers;
 [Route("habits")]
 [ApiController]
+[ApiVersion("1.0")]
+
 public sealed class HabitController(ApplicationDbContext context, IMapper mapper, LinkService linkService) : ControllerBase
 {
     private readonly IMapper mapper = mapper;
@@ -72,6 +75,7 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     }
 
     [HttpGet("{id}")]
+    [MapToApiVersion(1.0)]
     public async Task<IActionResult> GetHabit(string id, string? fields, DataShapingService dataShaping, [FromHeader(Name="Accept")]string? accept)
     {
         if (string.IsNullOrEmpty(id))
@@ -101,7 +105,38 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
         return Ok(result);
     }
 
-  
+
+    [HttpGet("{id}")]
+    [ApiVersion(2.0)]
+    public async Task<IActionResult> GetHabitV2(string id, string? fields, DataShapingService dataShaping, [FromHeader(Name = "Accept")] string? accept)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return BadRequest("Empty Habit ID");
+        }
+        if (!dataShaping.Validate<HabitWithTagDtoV2>(fields))
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest,
+              detail: $"The provided data shaping field parameter is not valid -> '{fields}");
+        }
+        HabitWithTagDtoV2? habit = await context.Habits
+                .Where(h => h.Id == id)
+                .Select(HabitQueries.ProjectToDtoWithTagsV2())
+                .FirstOrDefaultAsync();
+
+        if (habit is null)
+        {
+            return NotFound();
+        }
+        ExpandoObject result = dataShaping.ShapeData(habit, fields);
+        if (accept == CustomMediaTypeNames.Application.HateoasJson)
+        {
+            List<LinkDto> links = CreateLinksForHabit(id, fields);
+            result.TryAdd("links", links);
+        }
+        return Ok(result);
+    }
+
 
     [HttpPost]
     public async Task<IActionResult> CreateHabit(CreateHabitDto createHabitDto, IValidator<CreateHabitDto> validator)

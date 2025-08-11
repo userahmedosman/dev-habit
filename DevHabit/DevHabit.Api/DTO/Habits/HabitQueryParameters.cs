@@ -18,5 +18,8 @@ public sealed record HabitQueryParameters
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 5;
 
+    [FromHeader(Name="Accept")]
+
+    public string? Accept { get; set; } 
 
 }

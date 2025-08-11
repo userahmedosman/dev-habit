@@ -7,11 +7,13 @@ using DevHabit.Api.Middleware;
 using DevHabit.Api.Services;
 using DevHabit.Api.Services.Sorting;
 using FluentValidation;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json.Serialization;
 using OpenTelemetry;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -77,25 +79,55 @@ public static class DependencyInjection
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Database")));
 
+        builder.Services.AddDbContext<ApplicationIdentityDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("Database")));
+
         return builder;
     }
 
-    public static WebApplicationBuilder AddOpenTelemetry(this WebApplicationBuilder builder) {
+    public static WebApplicationBuilder AddObservability(this WebApplicationBuilder builder)
+    {
         builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource.AddService(builder.Environment.ApplicationName))
-    .WithTracing(tracing => tracing
-        .AddHttpClientInstrumentation()
-        .AddAspNetCoreInstrumentation())
-    .WithMetrics(metrics => metrics
-        .AddHttpClientInstrumentation()
-        .AddAspNetCoreInstrumentation()
-        .AddRuntimeInstrumentation())
-        .UseOtlpExporter();
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation(options =>
+            {
+                options.SetDbStatementForText = true;
+                options.SetDbStatementForStoredProcedure = true;
+            })
+            .AddSqlClientInstrumentation(options =>
+            {
+                options.SetDbStatementForText = true;
+            })
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://localhost:18888");
+            });
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://localhost:18888");
+            });
+    });
 
-        builder.Logging.AddOpenTelemetry(options =>
+        builder.Logging.AddOpenTelemetry(logging =>
         {
-            options.IncludeScopes = true;
-            options.IncludeFormattedMessage = true;
+            logging.IncludeFormattedMessage = true;
+            logging.IncludeScopes = true;
+            logging.ParseStateValues = true;
+            logging.AddOtlpExporter(options =>
+            {
+                options.Endpoint = new Uri("http://localhost:18888");
+            });
         });
 
         return builder;
@@ -112,6 +144,14 @@ public static class DependencyInjection
         builder.Services.AddTransient<DataShapingService>();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddTransient<LinkService>();
+
+        return builder;
+    }
+
+    public static WebApplicationBuilder AddAthenticationServices(this WebApplicationBuilder builder) {
+        builder.Services
+            .AddIdentity<IdentityUser, IdentityRole>()
+            .AddEntityFrameworkStores<ApplicationIdentityDbContext>();
 
         return builder;
     }

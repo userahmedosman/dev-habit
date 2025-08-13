@@ -2,12 +2,15 @@
 using DevHabit.Api.DTO.Auth;
 using DevHabit.Api.DTO.Users;
 using DevHabit.Api.Entities;
+using DevHabit.Api.Services;
+using DevHabit.Api.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Options;
 
 namespace DevHabit.Api.Controllers;
 [Route("auth")]
@@ -16,11 +19,15 @@ namespace DevHabit.Api.Controllers;
 public class AuthController(
     UserManager<IdentityUser> userManager, 
     ApplicationDbContext dbContext, 
-    ApplicationIdentityDbContext identityDbContext) : ControllerBase
+    ApplicationIdentityDbContext identityDbContext, 
+    TokenProvider tokenProvider,
+    IOptions<JwtAuthOptions> options) : ControllerBase
 {
+    private readonly JwtAuthOptions _jwtAuthOptions = options.Value;
+
     [HttpPost("register")]
 
-    public async Task<IActionResult> Register(RegisterUserDto registerUserDto)
+    public async Task<ActionResult<AccessTokenDto>> Register(RegisterUserDto registerUserDto)
     {
         using IDbContextTransaction transaction = await identityDbContext.Database.BeginTransactionAsync();
         dbContext.Database.SetDbConnection(identityDbContext.Database.GetDbConnection());
@@ -52,8 +59,82 @@ public class AuthController(
        dbContext.Users.Add( user );
 
         await dbContext.SaveChangesAsync();
+        var tokenRequest = new TokenRequest(identityUser.Id, identityUser.Email);
+
+        AccessTokenDto accessToken = tokenProvider.Create(tokenRequest);
+
+        var refreshToken = new RefreshToken
+        {
+            Id = Guid.CreateVersion7(),
+            UserId = identityUser.Id,
+            Token = accessToken.refreshToken,
+            ExpiresAtUtc = DateTime.UtcNow.AddDays(_jwtAuthOptions.RefreshTokenExpirationDays)
+        };
+
+        identityDbContext.RefreshTokens.Add( refreshToken );
+        await identityDbContext.SaveChangesAsync();
+
         await transaction.CommitAsync();
-        return Ok(user.Id);
+
+       
+        return Ok(accessToken);
+
+    }
+
+    [HttpPost("login")]
+    public async Task<ActionResult<AccessTokenDto>> LogIn(LogInUserDto logInUserDto)
+    {
+        IdentityUser? identityUser = await userManager.FindByEmailAsync(logInUserDto.Email);
+        if(identityUser is null || !await userManager.CheckPasswordAsync(identityUser, logInUserDto.Password))
+        {
+            return Unauthorized();
+        }
+
+        var tokenRequest = new TokenRequest(identityUser.Id, identityUser.Email!);
+        AccessTokenDto accessToken = tokenProvider.Create(tokenRequest);
+
+        var refreshToken = new RefreshToken
+        {
+            Id = Guid.CreateVersion7(),
+            UserId = identityUser.Id,
+            Token = accessToken.refreshToken,
+            ExpiresAtUtc = DateTime.UtcNow.AddDays(_jwtAuthOptions.RefreshTokenExpirationDays)
+        };
+
+        identityDbContext.RefreshTokens.Add(refreshToken);
+        await identityDbContext.SaveChangesAsync();
+
+        return Ok(accessToken);
+    }
+
+    [HttpPost("refresh")]
+
+    public async Task<ActionResult<AccessTokenDto>> Refresh(RefreshTokenDto refreshTokenDto)
+    {
+        RefreshToken? refreshToken = await identityDbContext.RefreshTokens
+            .Include(rt => rt.User)
+            .FirstOrDefaultAsync(rt => rt.Token ==  refreshTokenDto.RefreshToken);
+
+        if(refreshToken is null)
+        {
+            return Unauthorized();
+        }
+
+        if(refreshToken.ExpiresAtUtc < DateTime.UtcNow)
+        {
+            return Unauthorized();
+        }
+
+        var tokenRequest = new TokenRequest(refreshToken.User.Id, refreshToken.User.Email!);
+
+        AccessTokenDto accessToken = tokenProvider.Create(tokenRequest);
+
+        refreshToken.Token = accessToken.refreshToken;
+        refreshToken.ExpiresAtUtc = DateTime.UtcNow.AddDays(_jwtAuthOptions.RefreshTokenExpirationDays);
+
+        await identityDbContext.SaveChangesAsync();
+
+        return Ok(accessToken);
 
     }
 }

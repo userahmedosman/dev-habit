@@ -2,6 +2,7 @@
 using DevHabit.Api.Database;
 using DevHabit.Api.DTO.HabitTag;
 using DevHabit.Api.Entities;
+using DevHabit.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,15 +12,22 @@ namespace DevHabit.Api.Controllers;
 [Authorize]
 [Route("habits/{habitId}/tags")]
 [ApiController]
-public class HabitTagController(ApplicationDbContext context) : ControllerBase
+public class HabitTagController(ApplicationDbContext context, UserContext userContext) : ControllerBase
 {
     public static readonly string Name = nameof(HabitTagController).Replace("Controller", string.Empty);
     [HttpPut]
     public async Task<ActionResult> UpsertHabitTags(string habitId, UpsertHabitTagDto upsertHabitTagDto)
     {
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
         var habit = await context.Habits
             .Include(h => h.HabitTags)
-            .FirstOrDefaultAsync(h_id => h_id.Id == habitId);
+            .FirstOrDefaultAsync(h => h.Id == habitId && h.UserId == userId);
         if (habit is null)
         {
             return NotFound();
@@ -49,6 +57,7 @@ public class HabitTagController(ApplicationDbContext context) : ControllerBase
         habit.HabitTags.AddRange(
             tagIdsToAdd.Select(tagId => new HabitTag
             {
+                
                 HabitId = habitId,
                 TagId = tagId,
                 CreatedAtUtc = DateTime.UtcNow

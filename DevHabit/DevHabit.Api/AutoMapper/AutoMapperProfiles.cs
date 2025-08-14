@@ -21,7 +21,6 @@ public class AutoMapperProfiles: Profile
             .ForMember(dest => dest.Tags, opt =>
             opt.MapFrom(src => src.Tags.Select(t => t.Name).ToList()));
 
-
         // Tags
 
         CreateMap<TagDto, Tag>().ReverseMap();

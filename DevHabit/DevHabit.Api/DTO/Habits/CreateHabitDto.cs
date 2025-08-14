@@ -2,7 +2,8 @@
 
 public sealed record CreateHabitDto
 {
-    public required string Name { get; init; } = string.Empty;
+
+    public required string Name { get; init; }
 
     public string? Description { get; init; }
 

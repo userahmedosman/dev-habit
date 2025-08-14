@@ -150,6 +150,9 @@ public static class DependencyInjection
         builder.Services.AddTransient<LinkService>();
         builder.Services.AddTransient<TokenProvider>();
 
+        builder.Services.AddMemoryCache();
+        builder.Services.AddScoped<UserContext>();
+
         return builder;
     }
 
@@ -175,7 +178,7 @@ public static class DependencyInjection
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
 
-
+                        ValidateLifetime = true,
                         ValidIssuer = jwtAuthOptions.Issuer,
                         ValidAudience = jwtAuthOptions.Audience,
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtAuthOptions.Key))

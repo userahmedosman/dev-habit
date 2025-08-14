@@ -30,7 +30,11 @@ namespace DevHabit.Api.Controllers;
     CustomMediaTypeNames.Application.HateoasJson,
     CustomMediaTypeNames.Application.HateoasJsonV1,
     CustomMediaTypeNames.Application.HateoasJsonV2)]
-public sealed class HabitController(ApplicationDbContext context, IMapper mapper, LinkService linkService) : ControllerBase
+public sealed class HabitController(
+    ApplicationDbContext context, 
+    IMapper mapper, 
+    LinkService linkService,
+    UserContext userContext) : ControllerBase
 {
     private readonly IMapper mapper = mapper;
 
@@ -40,7 +44,14 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     SortMappingProvider sortMappingProvider,
     DataShapingService dataShaping)
     {
-        if(!sortMappingProvider.ValidateMapping<HabitDto, Habit>(query.Sort))
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+        
+        if (!sortMappingProvider.ValidateMapping<HabitDto, Habit>(query.Sort))
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest,
                 detail: $"The provided sorting parameter is not valid -> '{query.Sort}");
@@ -55,6 +66,7 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
         SortMapping[] sortMappings = sortMappingProvider.GetMappings<HabitDto, Habit>();
 
         IQueryable<HabitWithTagDto> habitQuery = context.Habits
+            .Where(u => u.UserId == userId)
             .Where(h => string.IsNullOrEmpty(query.Search) || h.Name.ToLower().Contains(query.Search) || h.Description != null && h.Description.ToLower()
             .Contains(query.Search))
             .Where(t => query.Type == null || t.Type == query.Type)
@@ -88,17 +100,20 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     
     public async Task<IActionResult> GetHabit(string id, string? fields, DataShapingService dataShaping, [FromHeader(Name="Accept")]string? accept)
     {
-        if (string.IsNullOrEmpty(id))
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
         {
-            return BadRequest("Empty Habit ID");
+            return Unauthorized();
         }
+       
         if (!dataShaping.Validate<HabitDto>(fields))
         {
             return Problem(statusCode: StatusCodes.Status400BadRequest,
               detail: $"The provided data shaping field parameter is not valid -> '{fields}");
         }
         HabitWithTagDto? habit = await context.Habits
-                .Where(h => h.Id == id)
+                .Where(h => h.Id == id && h.UserId == userId)
                 .Select(HabitQueries.ProjectToDtoWithTags())
                 .FirstOrDefaultAsync();
 
@@ -120,9 +135,11 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     [ApiVersion(2.0)]
     public async Task<IActionResult> GetHabitV2(string id, string? fields, DataShapingService dataShaping, [FromHeader(Name = "Accept")] string? accept)
     {
-        if (string.IsNullOrEmpty(id))
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
         {
-            return BadRequest("Empty Habit ID");
+            return Unauthorized();
         }
         if (!dataShaping.Validate<HabitWithTagDtoV2>(fields))
         {
@@ -130,7 +147,7 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
               detail: $"The provided data shaping field parameter is not valid -> '{fields}");
         }
         HabitWithTagDtoV2? habit = await context.Habits
-                .Where(h => h.Id == id)
+                .Where(h => h.Id == id && h.UserId ==  userId)
                 .Select(HabitQueries.ProjectToDtoWithTagsV2())
                 .FirstOrDefaultAsync();
 
@@ -151,10 +168,18 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     [HttpPost]
     public async Task<IActionResult> CreateHabit(CreateHabitDto createHabitDto, IValidator<CreateHabitDto> validator)
     {
-         await validator.ValidateAndThrowAsync(createHabitDto);
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        await validator.ValidateAndThrowAsync(createHabitDto);
 
         Habit habit = mapper.Map<Habit>(createHabitDto);
         habit.Id = $"h_{Guid.CreateVersion7()}"; 
+        habit.UserId = userId;
         habit.CreatedAtUtc = DateTime.UtcNow;
         habit.Status = Entities.HabitStatus.Ongoing;
         context.Habits.Add(habit);
@@ -167,11 +192,17 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateHabit(string id, UpdateHabitDto updateHabitDto)
     {
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
-        Habit? existingHabit = await context.Habits.FindAsync(id);
+        Habit? existingHabit = await context.Habits.FirstOrDefaultAsync(h => h.Id == id && h.UserId == userId);
         if (existingHabit is null)
         {
             return NotFound();
@@ -187,7 +218,13 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     [HttpPatch("{id}")]
     public async Task<IActionResult> PartialUpdate(string id, [FromBody] JsonPatchDocument<HabitDto> patchDocument)
     {
-        Habit? existingHabit = await context.Habits.FirstOrDefaultAsync(Id => Id.Id == id);
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+        Habit? existingHabit = await context.Habits.FirstOrDefaultAsync(u => u.Id == id && u.UserId == userId);
         if (existingHabit is null)
         {
             return NotFound();
@@ -211,7 +248,13 @@ public sealed class HabitController(ApplicationDbContext context, IMapper mapper
     [HttpDelete("{id}")]    
     public async Task<IActionResult> DeleteHabit(string id)
     {
-        Habit? existingHabit = await context.Habits.FirstOrDefaultAsync(Id => Id.Id == id);
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+        Habit? existingHabit = await context.Habits.FirstOrDefaultAsync(u => u.Id == id && u.UserId == userId);
         if (existingHabit is null)
         {
             return NotFound();

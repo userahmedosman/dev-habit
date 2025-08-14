@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevHabit.Api.Migrations.Identity
 {
     [DbContext(typeof(ApplicationIdentityDbContext))]
-    [Migration("20250813144629_Add-RefreshToken")]
-    partial class AddRefreshToken
+    [Migration("20250814183703_RefreshedIdentityMigration")]
+    partial class RefreshedIdentityMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

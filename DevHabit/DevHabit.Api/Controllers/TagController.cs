@@ -2,6 +2,7 @@
 using DevHabit.Api.Database;
 using DevHabit.Api.DTO.Tags;
 using DevHabit.Api.Entities;
+using DevHabit.Api.Services;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -12,15 +13,21 @@ namespace DevHabit.Api.Controllers;
 [Authorize]
 [Route("tags")]
 [ApiController]
-public class TagController(ApplicationDbContext context, IMapper mapper) : ControllerBase
+public class TagController(ApplicationDbContext context, IMapper mapper, UserContext userContext) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<TagDto>>> GetTags()
     {
-        var tags = await context.Tags.ToListAsync();
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+        List<Tag> tags = await context.Tags.Where(u => u.UserId == userId).ToListAsync();
 
 
-        var tagsDtos = mapper.Map<List<TagDto>>(tags);
+        List<TagDto> tagsDtos = mapper.Map<List<TagDto>>(tags);
 
         var tagCollection = new TagCollectionDto
         {
@@ -34,7 +41,14 @@ public class TagController(ApplicationDbContext context, IMapper mapper) : Contr
     [HttpGet("{id}")]
     public async Task<ActionResult<TagDto>> GetTag(string id)
     {
-        var tag = await context.Tags.FirstOrDefaultAsync(Id =>  Id.Id ==  id);
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var tag = await context.Tags.FirstOrDefaultAsync(u =>  u.Id ==  id && u.UserId == userId);
         if (tag == null)
         {
             return NotFound();
@@ -45,11 +59,19 @@ public class TagController(ApplicationDbContext context, IMapper mapper) : Contr
     [HttpPost]
     public async Task<ActionResult<Tag>> CreateTag(CreateTagDto createTagDto, IValidator<CreateTagDto> validator)
     {
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
         await validator.ValidateAndThrowAsync(createTagDto);
         
-        var tag = mapper.Map<Tag>(createTagDto);
+        Tag tag = mapper.Map<Tag>(createTagDto);
 
         tag.Id = $"t_{Guid.CreateVersion7()}";
+        tag.UserId = userId;
         tag.Name = createTagDto.Name;
         tag.Description = createTagDto.Description;
         tag.CreatedAtUtc = DateTime.UtcNow;
@@ -62,8 +84,8 @@ public class TagController(ApplicationDbContext context, IMapper mapper) : Contr
 
         context.Tags.Add(tag);
         await context.SaveChangesAsync();
-        
-        return CreatedAtAction(nameof(GetTag), new { id = tag.Id }, tag);
+        TagDto tagDto = mapper.Map<TagDto>(tag);
+        return CreatedAtAction(nameof(GetTag), new { id = tag.Id }, tagDto);
     }
     [HttpPut("{id}")]
     public async Task<ActionResult<Tag>> UpdateTag(string id, UpdateTagDto updateTagdto)
@@ -72,8 +94,15 @@ public class TagController(ApplicationDbContext context, IMapper mapper) : Contr
         {
             return BadRequest(ModelState);
         }
-        
-        var tag = await context.Tags.FirstOrDefaultAsync(Id => Id.Id == id);
+
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var tag = await context.Tags.FirstOrDefaultAsync(u => u.Id == id && u.UserId == userId);
         if (tag == null)
         {
             return NotFound();
@@ -89,7 +118,14 @@ public class TagController(ApplicationDbContext context, IMapper mapper) : Contr
     [HttpDelete("{id}")]
     public async Task<ActionResult> DeleteTag(string id)
     {
-        var tag = await context.Tags.FirstOrDefaultAsync(Id => Id.Id == id);
+        string? userId = await userContext.GetUserIdAsync();
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var tag = await context.Tags.FirstOrDefaultAsync(u => u.Id == id && u.UserId == userId);
         if (tag is null)
         {
             return NotFound();

@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevHabit.Api.Controllers;
-[Authorize]
+[Authorize(Roles = $"{Roles.Admin}")]
 [Route("habits/{habitId}/tags")]
 [ApiController]
 public class HabitTagController(ApplicationDbContext context, UserContext userContext) : ControllerBase

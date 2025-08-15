@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevHabit.Api.Controllers;
-[Authorize]
+[Authorize(Roles = $"{Roles.Admin}")]
 [Route("tags")]
 [ApiController]
 public class TagController(ApplicationDbContext context, IMapper mapper, UserContext userContext) : ControllerBase

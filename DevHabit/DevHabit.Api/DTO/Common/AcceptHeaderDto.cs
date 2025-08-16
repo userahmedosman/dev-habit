@@ -9,9 +9,9 @@ public record AcceptHeaderDto
     [FromHeader(Name = "Accept")]
     public string? Accept { get; init; }
 
-    //public bool IncludeLinks =>
-    //    MediaTypeHeaderValue.TryParse(Accept, out MediaTypeHeaderValue? mediatype) &&
-    //    mediatype.SubTypeWithOutSuffix.HasValue && 
-    //    mediatype.SubTypeWithOutSuffix.Value.Contains(CustomMediaTypeNames.Application.Ha)
-
+    public bool IncludeLinks =>
+      MediaTypeHeaderValue.TryParse(Accept, out MediaTypeHeaderValue? mediaType) &&
+      !string.IsNullOrEmpty(mediaType.MediaType) &&
+      mediaType.MediaType
+        .Contains(CustomMediaTypeNames.Application.HateoasSubType);
 }

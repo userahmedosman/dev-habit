@@ -165,7 +165,8 @@ public static class DependencyInjection
                 client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
             });
 
-
+        builder.Services.Configure<EncryptionOptions>(builder.Configuration.GetSection("Encryption"));
+        builder.Services.AddTransient<EncrytionService>();
         return builder;
     }
 
